@@ -1,73 +1,76 @@
-#include <SoftwareSerial.h>// va a richiamare la libreria "SoftwareSerial.h"
-
-#define rxPin 10
-#define txPin 8
-//Configura un nuovo oggetto SoftwareSerial
-SoftwareSerial mySerial =  SoftwareSerial(rxPin, txPin);
+#include <SoftwareSerial.h> //include la classe “SoftwareSerial.h”; la classe è un insieme di attrubuti e metodi.
+#define rxPin 10 //definisce che il pin 10 della scheda arduino si chiama “rxPn”, che fungerà da ricevitore. 
+#define txPin 8  //definisce che il pin 8 della scheda arduino si chiama “txPn”, che fungerà da trasmettitore.
+// Set up a new SoftwareSerial object 
+SoftwareSerial serialModuloWIFI =  SoftwareSerial(rxPin, txPin);  //crea un nuovo oggetto di nome “mySerial” con la funzione costruttore; l’oggetto ha come parametri i due pin. 
 
 String check4answer(){
-    String str = "";
-    while (mySerial.available() > 0) {
-        char c=mySerial.read();
-        Serial.print(c);
-        str += String(c);
+    String str = ""; //crea una stringa vuota
+    //available è usato per verificare la presenza di dati trasmessi dal moduloWIFI per l'Arduino; 
+    while (serialModuloWIFI.available() > 0){ //crea un ciclo while che controllerà i valori del modulo wifi finchè rispettano la condizione;
+        char c=serialModuloWIFI.read(); //legge i valori inviati dal modulo e li salva in una funzione;
+        Serial.print(c); //stampa i valori del moduloWIFI;
+        str += String(c); //aggiunge alla stringa i valori del moduloWIFI; 
     }
-    return str;
+    return str; //fa il return della stringa;
 }
-
-
-String esp01cmd(String cmd) {
-  Serial.println("sending: " + cmd);
-  mySerial.println(cmd);
-  delay(10);
-  return check4answer();
-}
-
+//invia i comandi al modulo WIFI; riceve i comandi da inviare; aspetta e resrituisce la risposta del modulo WIFI.
+String esp01cmd(String cmd){ //crea una funzione che ha come parametri delle stringhe 
+  Serial.println("sending: " + cmd); //stampa sul monitor seriale il comando inviato sul monitor serial;
+  serialModuloWIFI.println(cmd); //invia il comando al modulo WIFI;
+  delay(10); //aspetta 10 millisecondi;
+  String risposta = check4answer();} //fa un return della funzione “check4answer()”;
+  return risposta; 
 void setup()  {
-    // Definisce le modalità  di pin per TX e RX
-    pinMode(rxPin, INPUT);
-    pinMode(txPin, OUTPUT);
+    // Define pin modes for TX and RX
+    pinMode(rxPin, INPUT); //definisce il pin come input;
+    pinMode(txPin, OUTPUT); //definisce il pin come  output;
     
-    // Imposta la velocità di trasmissione per l'oggetto SoftwareSerial
-    mySerial.begin(115200);
-    Serial.begin(9600);
-    delay(1000);
-    esp01cmd("AT");
-    delay(1000);
-    esp01cmd("AT+CWMODE=2"); // fa in modo che il robottino funzuìioni come acces point e quindi come server
-    delay(1000);
-    esp01cmd("AT+CWSAP=\"robottino\",\"robottino\",1,4"); //imposta ssid, poi la password, il canale e la crittografia 
-    delay(1000);
-    esp01cmd("AT+CIFSR"); //mostra l'indirizzo IP dell'AP
-    esp01cmd("AT+CIPMUX=1"); //consente ad un massimo di 1 connessione alla volta
+    // Set the baud rate for the SoftwareSerial object
+    //comandi AT configura il modulo WIFI
+    serialModuloWIFI.begin(115200); //velocità di trasmissione per l’oggetto da noi creato;
+    Serial.begin(9600); //velocità di trasmissione dei dati;
+    delay(1000); //aspetta 1 secondo;
+    esp01cmd("AT"); //testa la connessione della UART, controlla che sia funzionante
+    delay(1000); //aspetta 1 secondo;
+    esp01cmd("AT+CWMODE=2"); //setta il modulo WIFI come server wifi, ovevero access point; 
+    delay(1000); //aspetta 1 secondo;
+    esp01cmd("AT+CWSAP=\"robottino\",\"robottino\",1,4"); //imposta ssid (nome) e la password del wifi
+    delay(1000); //aspetta 1 secondo;
+    esp01cmd("AT+CIFSR"); //show Access Point IP address
+    esp01cmd("AT+CIPMUX=1"); //allow up to 1 connections at the time
     
     
-    Serial.println("ESP-01 Configuration Completed");
+    Serial.println("ESP-01 Configuration Completed"); //dice che la configurazione è completa;
 }
 
 void loop() {
     Serial.println("loop...");
-    while(esp01cmd("AT+CWLIF").substring(11,18) != "192.168") {
-      Serial.println("no connections so far... still waiting");
-      delay(1000);
-    }
+    //AT+CWLIF restituisce l'indirizzo IP del client (telefono) connesso al modulo wifi 
+    while(esp01cmd("AT+CWLIF").substring(11,18) != "192.168"){//controlla se qualcuno si è collegato
+      Serial.println("no connections so far... still waiting"); //dice che nessuno è connesso, sta ancora aspettando;
+      delay(1000); //aspetta 1 secondo;
+    }// finchè non trova un'indirizzo IP continuerà ad aspettare
 
-    Serial.println("Connection from remote device was Established!!!");
-    //ID socket: 3
-    //accetta pacchetti da qualsiasi indirizzo/dispositivo IP
-    //Ascolta la porta locale 4567
-    //i pacchetti in uscita possono essere inviati a qualsiasi host remoto senza restrizioni
-    esp01cmd("AT+CIPSTART=3,\"UDP\",\"0.0.0.0\",0,4567,2"); //avvio del server socket UDP
-
+    Serial.println("Connection from remote device was Established!!!"); //dice che ha stabilito una connessione;
+    //Socket ID: 3
+    //accept packets from any IP address/devices
+    //Listen to local port 4567
+    //outgoing packets could go to any remote host without restrictions...
+    esp01cmd("AT+CIPSTART=3,\"UDP\",\"0.0.0.0\",0,4567,2"); //starting UDP Socket Server 
     
-
-    delay(3000);
+//    String str = ;    
+//    Serial.println("received: "+esp01cmd("AT+CWLIF").substring(11,18));
+    delay(3000); //aspetta 3 secondi;
     while(true) {
-      String str = mySerial.readString();
+      String str = serialModuloWIFI.readString();
       if(str != "") {
         int startOfSTR = str.indexOf(":",10)+1;
         Serial.println("Received: "+str.substring(startOfSTR));
+        //Serial.println(startOfSTR);
       }
     }
 
 }
+
+
